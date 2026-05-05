@@ -8,6 +8,6 @@ with open("input.txt", "rb") as f:
         text += kusok.decode()
 
 for slovo in text.split():
-    if slovo.isdigit() and slovo != '0' and '7777' not in slovo and slovo.count('777') <= 1:
+    if slovo.isdigit() and slovo != '0' and '7777' not in slovo and slovo.count('777') == 1:
         odd_digits = sorted(set(c for c in slovo if c in odd))
         print(f"{slovo}  →  {' '.join(words[d] for d in odd_digits)}")
