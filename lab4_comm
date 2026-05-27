@@ -1,0 +1,97 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Ввод: K — скаляр, N — размер матрицы (оба на одной строке через пробел)
+K, N = map(int, input().split())
+
+# Считываем N строк по N чисел → numpy-матрица размера N×N
+A = np.array([list(map(int, input().split())) for _ in range(N)])
+
+print("A:\n", A)
+
+# Делим матрицу на 4 равных блока (предполагается чётное N):
+#   D | E       [:half, :half]  |  [:half, half:]
+#   -----   =   ----------------+----------------
+#   C | B       [half:, :half]  |  [half:, half:]
+half = N // 2
+D = A[:half, :half]   # левый верхний блок
+E = A[:half, half:]   # правый верхний блок
+C = A[half:, :half]   # левый нижний блок
+B = A[half:, half:]   # правый нижний блок
+
+# F — рабочая копия A; исходная A остаётся нетронутой
+F = A.copy()
+
+# Считаем количество нулей в блоке E в нечётных столбцах (j % 2 == 1)
+odd_cols = [j for j in range(half) if j % 2 == 1]
+zero_count = 0
+for i in range(half):
+    for j in odd_cols:
+        if E[i, j] == 0:
+            zero_count += 1
+
+# Считаем произведение всех элементов блока E в нечётных строках (i % 2 == 1)
+odd_rows = [i for i in range(half) if i % 2 == 1]
+product_odd = 1
+for i in odd_rows:
+    for j in range(half):
+        product_odd *= E[i, j]
+
+if zero_count * K > product_odd:
+    # Ветка 1: меняем блоки B и C местами (симметричная замена нижних блоков)
+    print("Меняем B и C симметрично")
+    F[half:, :half] = B   # на место C ставим B
+    F[half:, half:] = C   # на место B ставим C
+else:
+    # Ветка 2: меняем блоки B и E местами (несимметричная замена — нижний правый ↔ верхний правый)
+    print("Меняем B и E несимметрично")
+    F[:half, half:] = B   # на место E ставим B
+    F[half:, half:] = E   # на место B ставим E
+
+print("F:\n", F)
+
+# ── Визуализация ────────────────────────────────────────────────────────────
+plt.figure(figsize=(14, 4))
+
+# График 1: тепловая карта матрицы F (цвет = значение элемента)
+plt.subplot(131)
+plt.imshow(F, cmap='cool')
+plt.title('Матрица F')
+plt.colorbar()
+
+# График 2: средние значения по строкам и по столбцам матрицы F
+plt.subplot(132)
+plt.plot(np.mean(F, axis=0), marker='o', label='Среднее по столбцам')  # axis=0 → усредняем вдоль строк → получаем вектор по столбцам
+plt.plot(np.mean(F, axis=1), marker='s', label='Среднее по строкам')   # axis=1 → усредняем вдоль столбцов → вектор по строкам
+plt.title('Средние значения матрицы F')
+plt.xlabel('Индекс')
+plt.ylabel('Среднее значение')
+plt.legend()
+plt.grid(True)
+
+# График 3: гистограмма всех элементов F (F.flatten() разворачивает матрицу в одномерный массив)
+plt.subplot(133)
+plt.hist(F.flatten(), bins=20, edgecolor='black', alpha=0.7, color='teal')
+plt.title('Гистограмма элементов F')
+plt.xlabel('Значение')
+plt.ylabel('Частота')
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+# ── Вычисление результата ────────────────────────────────────────────────────
+detA = np.linalg.det(A)       # определитель матрицы A
+sum_diag_F = np.trace(F)      # след матрицы F (сумма элементов главной диагонали)
+
+if detA > sum_diag_F:
+    print("detA > sum_diag_F: A * A^T - K * F^{-1}")
+    # A @ A.T — матричное произведение A на её транспонирование
+    # np.linalg.inv(F) — обратная матрица к F
+    result = A @ A.T - K * np.linalg.inv(F)
+else:
+    print("detA <= sum_diag_F: (A^{-1} + G - F^T) * K")
+    G = np.tril(A)                    # нижнетреугольная матрица из A (tril = lower triangle)
+    result = (np.linalg.inv(A) + G - F.T) * K  # F.T — транспонирование F; * K — умножение на скаляр
+
+print("Результат:\n", result) 
